@@ -13,5 +13,15 @@ Technical Implementation:
 - Inter-app communication: Multiple desktop apps synchronize and exchange data through shared event systems.
 - Save System: Implemented in C# using JSON serialization and ScriptableObjects to capture conversations, player choices, and desktop states.
 
+  # In-Progress Demo:
+  A playable Windows build of the game is available here: https://ajaytemal.itch.io/those-who-walk-away)
+
+  Instructions:
+  1) Extract the ZIP file.
+  2) Run 'Those Who Walk Away.exe'
+  3) Enjoy!
+
+  
+
 
 
