@@ -1,4 +1,4 @@
-This folder contains all of the C# scripts for Those Who Walk Away. 
+# This folder contains all of the C# scripts for Those Who Walk Away. 
 
 The scripts are organized by their role in the overall game architecture: 
 
