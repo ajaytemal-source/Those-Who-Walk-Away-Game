@@ -9,8 +9,8 @@ public class ScrollRectVisibility : MonoBehaviour
     private ScrollRect scrollRect;
     private RectTransform viewport;
     private RectTransform content;
-    [SerializeField] private float checkDelay = 0f;       
-    [SerializeField] private float verticalBuffer = 50f;   
+    private float checkDelay = 0f;       
+    private float verticalBuffer = 50f;   
     private int lastChildCount;
     private Coroutine delayedCheckRoutine;
     public DragUI dragDropColliderScript; 

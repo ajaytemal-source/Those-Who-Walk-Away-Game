@@ -134,37 +134,35 @@ public class DialougeManager : MonoBehaviour
     //
     List<GameObject> glitchIconHolder = new();
 
+
+    private const float PreResponseWait = 0.8f;
+    private const float PostResponseWait = 0.5f;
+    private const float TinyWait = 0.0001f;
+
     // Start is called before the first frame update
     void Start()
     { 
-        pending_text.GetComponent<PendingResponseScript>().blinking = false; 
         close();
-        choice1.interactable = false;
-        choice2.interactable = false;
-        choice3.interactable = false;
         startButton.onClick.AddListener(openApp);
         minimzeButton.onClick.AddListener(minimize);
         exitButton.onClick.AddListener(close);
-        sendButton.gameObject.SetActive(false); 
-        typingBarButton.gameObject.SetActive(false);
-        horizontal_scrollRect.gameObject.SetActive(true);
-        sendingBarCanvasGroup.alpha = 0;
-        sendingBarCanvasGroup.interactable = false; 
-        irisCrashCodeCanvasGroup.alpha = 0;
-        irisCrashCodeCanvasGroup.interactable = false; 
         GameEvents.TriggerEvent.Subscribe(PathTriggerReciever);
         GameEvents.SendChoiceToIRYS.Subscribe(recieveOtherScriptChoice);
         GameEvents.TriggerGlitchReciever.Subscribe(IrysGlitchReciever);
     }
  
-    public void startConversation(string dialogue_to_parse_file, string dialogue_to_write, int convo_id){
-        TextAsset iris_dialogue_json = Resources.Load<TextAsset>(dialogue_to_parse_file);
-        conversation_response_dict[convo_id] = new Dictionary<int, Response>(); 
-        conversation_choices_dict[convo_id] = new Dictionary<int, Choice_Set>();
-        ParseDialogue(iris_dialogue_json, convo_id); 
-        log_file_path = Application.streamingAssetsPath + "/"+ dialogue_to_write + ".txt"; 
-        File.WriteAllText(log_file_path, "");  
-        currentConversation = StartCoroutine(IrisConversation(convo_id)); 
+    public void StartConversation(string dialogueToParseFile, string dialogueToWrite, int convoId){
+        var irysDialogueJson = Resources.Load<TextAsset>(dialogueToParseFile);
+
+        conversation_response_dict[convoId] = new Dictionary<int, Response>(); 
+        conversation_choices_dict[convoId] = new Dictionary<int, Choice_Set>();
+
+        ParseDialogue(irysDialogueJson, convoId); 
+
+        log_file_path = Path.Combine(Application.streamingAssetsPath, dialogueToWrite + ".txt");
+        File.WriteAllText(log_file_path, "");  // Overwrites existing log file intentionally
+
+        currentConversation = StartCoroutine(IrisConversation(convoId)); 
     }
 
     private void ParseDialogue(TextAsset json_file, int convo_id){
@@ -175,6 +173,7 @@ public class DialougeManager : MonoBehaviour
 
         foreach (RawNode node in nodeList.nodes){
             if (node.type == "response"){
+                
                 Response response = new Response{
                     id =  node.id,
                     output = node.output,
@@ -187,8 +186,10 @@ public class DialougeManager : MonoBehaviour
                     is_next_response = node.is_next_response
                 };
                 response_dict[response.id] = response; 
+
             }
             else if (node.type == "choice_set"){
+
                 Choice_Set choice_set = new Choice_Set{
                     id = node.id,
                     choices = node.choices,
@@ -197,11 +198,145 @@ public class DialougeManager : MonoBehaviour
                     nextIsChoice = node.nextIsChoice
                 };
                 choice_set_dict[choice_set.id] = choice_set; 
+
             }
         }
     }
 
-    public IEnumerator IrisConversation(int convo_id){
+    public IEnumerator IrisConversation(int convoId)
+    {
+        var responseDict = conversation_response_dict[convoId];
+        var choiceSetDict = conversation_choices_dict[convoId];
+
+        var pendingScript = pending_text.GetComponent<PendingResponseScript>();
+        var inputText = input.GetComponentInChildren<TextMeshProUGUI>();
+
+        int currId = 0;
+        bool isResponse = responseDict.Keys.Min() == 0;
+
+        while (currId != -1)
+        {
+            if (isResponse)
+            {
+                var currResponse = responseDict[currId];
+                yield return HandleResponse(currResponse);
+                currId = currResponse.next;
+                isResponse = currResponse.is_next_response;
+            }
+            else
+            {
+                var currChoices = choiceSetDict[currId];
+                yield return HandleChoice(currChoices, pendingScript, inputText);
+                currId = DetermineNextChoiceId(currChoices);
+                isResponse = !currChoices.nextIsChoice;
+            }
+        }
+
+        GameEvents.ConversationComplete.Raise(convoId);
+    }
+
+    private IEnumerator HandleResponse(Response currResponse)
+    {
+        // Stall before response if needed
+        if (currResponse.stallValue != ConversationStall.None && !currResponse.stallAfterRespond)
+        {
+            globalGameEventScript.ConversationStallList.Add(currResponse.stallValue);
+            yield return new WaitUntil(() => !globalGameEventScript.ConversationStallList.Contains(currResponse.stallValue));
+        }
+
+        // Replace player name in output
+        currResponse.output = currResponse.output.Replace("${name}", player_name);
+
+        // Process dialogue triggers
+        if (currResponse.dialogueTriggerPairCollection != null)
+        {
+            ProcessDialogueTriggers(currResponse);
+        }
+
+        // Trigger glitch if needed
+        if (currResponse.triggerGlitch != -1)
+            GameEvents.TriggerGlitchReciever.Raise(currResponse.triggerGlitch);
+
+        yield return new WaitForSeconds(PreResponseWait);
+        yield return StartCoroutine(TextGenAnimation(currResponse.output, Instantiate(output, contentWindow)));
+        yield return new WaitForSeconds(PostResponseWait);
+
+        AddToLog(log_file_path, $"IRYS:\n{currResponse.output}\n");
+
+        // Stall after response if needed
+        if (currResponse.stallValue != ConversationStall.None && currResponse.stallAfterRespond)
+        {
+            globalGameEventScript.ConversationStallList.Add(currResponse.stallValue);
+            yield return new WaitUntil(() => !globalGameEventScript.ConversationStallList.Contains(currResponse.stallValue));
+        }
+
+        // Remove stall if applicable
+        if (currResponse.removeStall != ConversationStall.None)
+            globalGameEventScript.ConversationStallList.Remove(currResponse.removeStall);
+    }
+
+    private void ProcessDialogueTriggers(Response currResponse)
+    {
+        foreach (var triggerCollection in currResponse.dialogueTriggerPairCollection)
+        {
+            foreach (var triggerPair in triggerCollection.dialogueTriggerPairs)
+            {
+                if (globalGameEventScript.TriggerList.Contains(triggerPair.trigger))
+                {
+                    int triggerIndex = Array.IndexOf(currResponse.dialogueTriggerPairCollection, triggerCollection) + 1;
+                    currResponse.output = currResponse.output.Replace($"{triggerIndex}{{trigger}}",
+                        triggerPair.dialogue.Replace("${name}", player_name));
+                    break; // only replace first matched trigger per collection
+                }
+            }
+        }
+    }
+
+    private IEnumerator HandleChoice(Choice_Set currChoices, PendingResponseScript pendingScript, TextMeshProUGUI inputText)
+    {
+        if (!currChoices.isWaitingForTeams)
+        {
+            List<string> choiceTexts = currChoices.choices.Select(c => c.output).ToList();
+            yield return new WaitUntil(() => WaitOnTypingBar(choiceTexts));
+            yield return new WaitUntil(() => WaitOnInput(choiceTexts));
+
+            pendingScript.blinking = false;
+
+            var chosen = currChoices.choices[chosenChoice];
+            yield return StartCoroutine(TypeText(chosen.output));
+
+            inputText.text = chosen.output;
+            instantiateTextPrefab(input, contentWindow);
+
+            if (chosen.trigger != Trigger.None)
+                GameEvents.TriggerEvent.Raise(chosen.trigger);
+
+            if (chosen.stallValue != ConversationStall.None)
+                globalGameEventScript.ConversationStallList.Remove(chosen.stallValue);
+
+            if (currChoices.otherScriptDepends)
+                GameEvents.SendChoiceToTeams.Raise(chosenChoice);
+
+            yield return new WaitForSeconds(TinyWait);
+            autoScroll.scrollVertically(vertical_ScrollRect);
+            AddToLog(log_file_path, $"User:\n{chosen.output}\n");
+        }
+        else
+        {
+            // Wait for dependent choice
+            yield return new WaitUntil(() => dependentChoiceIndex != -1);
+            dependentChoiceIndex = -1;
+        }
+    }
+
+    private int DetermineNextChoiceId(Choice_Set currChoices)
+    {
+        if (currChoices.nextIsChoice)
+            return currChoices.choices[0].next;
+        return chosenChoice != -1 ? currChoices.choices[chosenChoice].next : -1;
+    }
+
+    /*public IEnumerator IrisConversation(int convo_id){
 
         Dictionary<int, Response> response_dict = conversation_response_dict[convo_id];
         Dictionary<int, Choice_Set> choice_set_dict = conversation_choices_dict[convo_id];
@@ -256,7 +391,6 @@ public class DialougeManager : MonoBehaviour
                     yield return new WaitUntil(() => !globalGameEventScript.ConversationStallList.Contains(curr_response.stallValue));
                 }
                 if(curr_response.removeStall != ConversationStall.None){
-                    Debug.Log("Want to remove stall: " + curr_response.removeStall); 
                     globalGameEventScript.ConversationStallList.Remove(curr_response.removeStall);
                 }
             }
@@ -267,8 +401,8 @@ public class DialougeManager : MonoBehaviour
                     foreach (Choice choice in curr_choices.choices){
                         choiceTexts.Add(choice.output);
                     }
-                    yield return new WaitUntil(() => waitOnTypingBar(choiceTexts)); 
-                    yield return new WaitUntil(() => waitOnInput(choiceTexts)); 
+                    yield return new WaitUntil(() => WaitOnTypingBar(choiceTexts)); 
+                    yield return new WaitUntil(() => WaitOnInput(choiceTexts)); 
                     pending_text.GetComponent<PendingResponseScript>().blinking = false; 
                     yield return StartCoroutine(TypeText(curr_choices.choices[chosenChoice].output)); 
                     input.GetComponentInChildren<TextMeshProUGUI>().text = curr_choices.choices[chosenChoice].output;
@@ -303,123 +437,109 @@ public class DialougeManager : MonoBehaviour
         } 
         while(curr_id != -1);
         GameEvents.ConversationComplete.Raise(convo_id);
+    }*/
+
+
+
+
+    bool WaitOnInput(List<string> choices){ 
+        if (!typingBarPressed) return false;
+
+        if (choices.Count == 3){
+            if (HandleChoice(choice1, 0, choices.Count)) return true;
+            if (HandleChoice(choice2, 1, choices.Count)) return true;
+            if (HandleChoice(choice3, 2, choices.Count)) return true;
+        }
+        else if (choices.Count == 2){
+            if (HandleChoice(twoChoices1, 0, choices.Count)) return true;
+            if (HandleChoice(twoChoices2, 1, choices.Count)) return true;
+        }
+        else{
+            if (HandleChoice(choice2, 0, choices.Count)) return true;
+        }
+
+        if (choiceManagerScript.tappedOut){
+            pending_text.GetComponent<PendingResponseScript>().blinking = false; 
+            typingBarPressed = false; 
+            StartCoroutine(typingBarTapOut(choices));
+        }
+
+        return false; 
     }
 
-    //Choice Function 
-    bool waitOnInput(List<string> choices){ 
-        if(typingBarPressed){
-            if(choices.Count == 3){
-                if (choice1.GetComponent<ChoiceSelection>().pressed){
-                    chosenChoice = 0; 
-                    StartCoroutine(choiceManagerScript.turnOffChoices(choices.Count));
-                    choice1.GetComponent<ChoiceSelection>().pressed = false; 
-                    return true;  
-                }
-                else if (choice2.GetComponent<ChoiceSelection>().pressed){
-                    chosenChoice = 1; 
-                    StartCoroutine(choiceManagerScript.turnOffChoices(choices.Count));
-                    choice2.GetComponent<ChoiceSelection>().pressed = false; 
-                    return true;  
-                }
-                else if (choice3.GetComponent<ChoiceSelection>().pressed){
-                    chosenChoice = 2; 
-                    StartCoroutine(choiceManagerScript.turnOffChoices(choices.Count));
-                    choice3.GetComponent<ChoiceSelection>().pressed = false;
-                    return true;  
-                } 
-                else if(choiceManagerScript.tappedOut){
-                    pending_text.GetComponent<PendingResponseScript>().blinking = false; 
-                    typingBarPressed = false; 
-                    StartCoroutine(typingBarTapOut(choices));
-                }
-            }
-            else if (choices.Count == 2){
-                if (twoChoices1.GetComponent<ChoiceSelection>().pressed){
-                    chosenChoice = 0; 
-                    StartCoroutine(choiceManagerScript.turnOffChoices(choices.Count));
-                    twoChoices1.GetComponent<ChoiceSelection>().pressed = false; 
-                    return true;  
-                }
-                else if (twoChoices2.GetComponent<ChoiceSelection>().pressed){
-                    chosenChoice = 1; 
-                    StartCoroutine(choiceManagerScript.turnOffChoices(choices.Count));
-                    twoChoices2.GetComponent<ChoiceSelection>().pressed = false; 
-                    return true;  
-                }
-                else if(choiceManagerScript.tappedOut){
-                    pending_text.GetComponent<PendingResponseScript>().blinking = false; 
-                    typingBarPressed = false; 
-                    StartCoroutine(typingBarTapOut(choices));
-                }
-            }
-            else{
-                if (choice2.GetComponent<ChoiceSelection>().pressed){
-                    chosenChoice = 0; 
-                    StartCoroutine(choiceManagerScript.turnOffChoices(choices.Count));
-                    choice2.GetComponent<ChoiceSelection>().pressed = false; 
-                    return true;  
-                }
-                else if(choiceManagerScript.tappedOut){
-                    pending_text.GetComponent<PendingResponseScript>().blinking = false; 
-                    typingBarPressed = false; 
-                    StartCoroutine(typingBarTapOut(choices));
-                }
-            }
+    bool HandleChoice(Button choiceObj, int index, int count){
+        var selection = choiceObj.GetComponent<ChoiceSelection>();
+        if (selection.pressed){
+            chosenChoice = index;
+            StartCoroutine(choiceManagerScript.turnOffChoices(count));
+            selection.pressed = false;
+            return true;
+        }
+        return false;
+    }
+
+
+    bool waitOnSend(){
+        var selection = sendButton.GetComponent<ChoiceSelection>();
+        if (selection.pressed || (IRYS_CanvasGroup.alpha == 1 && Input.GetKeyDown(KeyCode.Return))){
+            selection.pressed = false; 
+            return true; 
         }
         return false; 
     }
 
-    bool waitOnSend(){
-        if(sendButton.GetComponent<ChoiceSelection>().pressed || (IRYS_CanvasGroup.alpha == 1 && Input.GetKeyDown(KeyCode.Return))){
-            sendButton.GetComponent<ChoiceSelection>().pressed = false; 
-            return true; 
-        }
-        else{
-            return false; 
-        }
-    }
+    bool WaitOnTypingBar(List<string> choices){ 
+        var cursor = typingBarButton.GetComponent<TextCursorScript>();
+        var pulse = typingBarButton.GetComponent<TBPulsatingScript>();
+        var selection = typingBarButton.GetComponent<ChoiceSelection>();
 
-    bool waitOnTypingBar(List<string> choices){ 
-        typingBarButton.GetComponent<TextCursorScript>().showCursor = true;  
+        cursor.showCursor = true;  
         typingBarButton.gameObject.SetActive(true);
-        typingBarButton.GetComponent<TBPulsatingScript>().isActive = true; 
-        if(typingBarButton.GetComponent<ChoiceSelection>().pressed){
-            typingBarButton.GetComponent<TBPulsatingScript>().isActive = false; 
+        pulse.isActive = true; 
+
+        if (selection.pressed){
+            pulse.isActive = false; 
             typingBarPressed = true; 
-            IRYS_CentralObject.transform.SetSiblingIndex(6);
-            choiceManagerScript.changeAllChoices(choices); //
-            StartCoroutine(choiceManagerScript.turnOnChoices(choices.Count)); //
-            typingBarButton.GetComponent<ChoiceSelection>().pressed = false; 
-            typingBarButton.GetComponent<TextCursorScript>().showCursor = false;
+            //IRYS_CentralObject.transform.SetSiblingIndex(6); // TODO: explain why 6
+            choiceManagerScript.changeAllChoices(choices);
+            StartCoroutine(choiceManagerScript.turnOnChoices(choices.Count));
+            
+            selection.pressed = false; 
+            cursor.showCursor = false;
             typingBarButton.gameObject.SetActive(false);
             pending_text.GetComponent<PendingResponseScript>().blinking = true; 
+
             return true;  
         }
-        else{
-            return false;  
-        }
-    }
 
-    //Will likely remove once new choice selection tap out system is implemented. 
+        return false;  
+    }
+ 
     IEnumerator typingBarTapOut(List<string> choices){
-        yield return StartCoroutine(choiceManagerScript.turnOffChoices(choices.Count)); //
-        yield return new WaitUntil(() => waitOnTypingBar(choices));  
+        yield return StartCoroutine(choiceManagerScript.turnOffChoices(choices.Count)); 
+        yield return new WaitUntil(() => WaitOnTypingBar(choices));  
     }
 
     IEnumerator TypeText(string text){
+        var textMesh = textBar.GetComponent<TextMeshProUGUI>();
+        var sb = new System.Text.StringBuilder();
+
         keyboard_sfx.Play();
-        string currentText = ""; 
-        foreach(char letter in text.ToCharArray()){
-            currentText += letter; 
-            textBar.GetComponent<TextMeshProUGUI>().text = currentText;
+
+        foreach (char letter in text){
+            sb.Append(letter);
+            textMesh.text = sb.ToString();
             autoScroll.scrollHorizontally(horizontal_scrollRect);  
-            yield return new WaitForSeconds(0.05f);
+            yield return new WaitForSeconds(0.05f); // Typing Delay
         }
+
         keyboard_sfx.Stop();
+
         sendButton.gameObject.SetActive(true);
         yield return new WaitUntil(waitOnSend);
         sendButton.gameObject.SetActive(false);
-        textBar.GetComponent<TextMeshProUGUI>().text = ""; 
+
+        textMesh.text = ""; 
     }
 
     IEnumerator TextGenAnimation(string text, GameObject nextText){
@@ -463,6 +583,7 @@ public class DialougeManager : MonoBehaviour
         yield return new WaitForSeconds(0.05f);
         nextText.GetComponent<TextMeshProUGUI>().text = currentText;
     }
+
     public void instantiateTextPrefab(GameObject text_prefab, RectTransform contentWindow){ 
         GameObject instantiated_prefab = Instantiate(text_prefab);
         RectTransform instantiated_RT = instantiated_prefab.GetComponent<RectTransform>();
