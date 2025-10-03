@@ -1,6 +1,6 @@
 # Those Who Walk Away - Game
 
-*Those Who Walk Away* is a desktop sci-fi simulation with branching narrative and complex interpersonal choices.
+*Those Who Walk Away* is a desktop sci-fi simulation with branching narratives and complex interpersonal choices.
 
 ![Game Cover](Images/GameCover.png)
 
