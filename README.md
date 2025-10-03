@@ -1,7 +1,7 @@
 # Those-Who-Walk-Away-Game
 Those Who Walk Away is a desktop sci-fi simulation with branching narrative and complex interpersonal choices.
 
-![Game Cover](GameCover.png)
+![Game Cover](Images/GameCover.png)
 
 Features:
 - Interactive desktop simulation: Navigate multiple desktop apps, each with functional and responsive UI.
