@@ -20,7 +20,7 @@
 - **Inter-app communication:** Multiple desktop apps synchronize and exchange data through shared event systems.  
 - **Save System:** Implemented in C# using JSON serialization and ScriptableObjects to capture conversations, player choices, and desktop states.
 
-All C# scripts implemnting these systems are included in the **Scripts** folder. Review them to see the underlying architecture, data handling, and gameplay logic.
+All C# scripts implementing these systems are included in the **Scripts** folder. Review them to see the underlying architecture, data handling, and gameplay logic.
 
 ---
 
