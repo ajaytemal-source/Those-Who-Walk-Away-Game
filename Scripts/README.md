@@ -16,4 +16,4 @@ Contains lightweight scripts for prefabs and low-maintenance systems, such as up
 ---
 
 **Note:**
-These scripts have been 'battle-tested' and mostly work reliably, though some are still in a draft-like state. Certain scripts already demonstrate my desired quality, such as IRYSDialogueManager and SaveFileManager (Core Scripts), WindowResizerScript (Important Scripts), and ScrollRectVisibility (Minor Scripts or Script Prefabs). Many of the other scripts are still evolving, and I am actively improving their readability, modularity, and maintainability as part of ongoing development.
+These scripts have been 'battle-tested' and mostly work reliably, though some are still in a draft-like state. Certain scripts already demonstrate near-production quality, such as IRYSDialogueManager and SaveFileManager (Core Scripts), WindowResizerScript (Important Scripts), and ScrollRectVisibility (Minor Scripts or Script Prefabs). Many of the other scripts are still evolving, and I am actively improving their readability, modularity, and maintainability as part of ongoing development.
