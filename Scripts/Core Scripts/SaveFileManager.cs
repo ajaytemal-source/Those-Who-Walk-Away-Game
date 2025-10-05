@@ -63,7 +63,7 @@ public class SaveFileManager : MonoBehaviour
         globalGameManager.current_save = saveFile.save_stage;
         globalGameManager.setPlayerName(saveFile.player_name);
 
-        // Parse save time in roundtrip "o" format
+        // System.Globalization.DateTimeStyles.RoundtripKind supports JSON parsing of string values into a dateTime type.
         updateTimeManager.customTime = DateTime.Parse(saveFile.save_time, null, System.Globalization.DateTimeStyles.RoundtripKind);
 
         globalGameManager.TriggerList = saveFile.triggers.Select(i => (Trigger)i).ToList();
@@ -159,4 +159,5 @@ public class SaveFileManager : MonoBehaviour
         ericScreenshotIndex = -1; 
         ericScreenshotTime = "";  
     }
+
 }
