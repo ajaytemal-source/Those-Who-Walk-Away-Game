@@ -10,7 +10,7 @@ public class WindowResizerScript : MonoBehaviour
 {
     public bool window_is_open; 
     public int app_id; 
-    public Vector2 minSize = new Vector2(100, 100); //^^Variable names need to be in underscore format 
+    public Vector2 minSize = new Vector2(100, 100);
     public Vector2 maxSize = new Vector2(600, 500);
     public Texture2D vertical_expand_cursor; 
     public Texture2D horizontal_expand_cursor;
@@ -188,3 +188,4 @@ public class WindowResizerScript : MonoBehaviour
     }
 
 }
+
