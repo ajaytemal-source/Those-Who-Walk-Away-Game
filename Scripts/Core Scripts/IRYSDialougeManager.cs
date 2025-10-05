@@ -394,7 +394,7 @@ public class DialougeManager : MonoBehaviour
         if (selection.pressed){
             pulse.isActive = false; 
             typingBarPressed = true; 
-            //IRYS_CentralObject.transform.SetSiblingIndex(6); // TODO: explain why 6
+            //IRYS_CentralObject.transform.SetSiblingIndex(6); // 6 is the level in the scene hierarchy that represents the prioritized app. 
             choiceManagerScript.changeAllChoices(choices);
             StartCoroutine(choiceManagerScript.turnOnChoices(choices.Count));
             
@@ -447,7 +447,7 @@ public class DialougeManager : MonoBehaviour
                 int endIndex = text.IndexOf('>', i);
                 if (endIndex != -1)
                 {
-                    string waitToken = text.Substring(i + 6, endIndex - (i + 6)); // the number part
+                    string waitToken = text.Substring(i + 6, endIndex - (i + 6));
                     if (float.TryParse(waitToken, out float waitTime))
                     {
                         yield return new WaitForSeconds(waitTime);
@@ -748,5 +748,6 @@ public class DialougeManager : MonoBehaviour
         Utility.openCanvasGroup(keyErrorCodeCanvasGroup); 
         StopAllCoroutines(); 
     }
+
 
 }
