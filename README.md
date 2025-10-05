@@ -2,6 +2,8 @@
 
 *Those Who Walk Away* is a desktop sci-fi simulation with branching narratives and complex interpersonal choices.
 
+Check the [Itch.io Link](https://ajaytemal.itch.io/those-who-walk-away) for a deeper dive into the story and world. 
+
 ![Game Cover](Images/GameCover.png)
 
 ---
