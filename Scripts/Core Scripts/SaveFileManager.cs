@@ -75,7 +75,7 @@ public class SaveFileManager : MonoBehaviour
     {
         foreach (ConvoSave convo in saveFile.conversations)
         {
-            if (convo.thread == Thread.None){
+            if (convo.thread == Thread.None){ //Thread.None value indicates 'null' Teams thread --> indicates it must be an email conversation. (Might change for clarity later)
                 emailDialogueManager.loadConversation(convo);
             }
             else{
@@ -161,3 +161,4 @@ public class SaveFileManager : MonoBehaviour
     }
 
 }
+
