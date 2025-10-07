@@ -4,7 +4,7 @@
 
 Check the [Itch.io Link](https://ajaytemal.itch.io/those-who-walk-away) for a deeper dive into the story and world. 
 
-![Game Cover](Images/GameCover.png)
+![Game Cover](Images/CoverArt.PNG)
 
 ---
 
