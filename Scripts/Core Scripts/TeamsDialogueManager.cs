@@ -81,8 +81,8 @@ public class TeamsDialogueManager : MonoBehaviour
     int ericUnreadCount; //Becomes Renes 
     int irysUnreadCount; 
     
-    public string playerChatlog = Application.streamingAssetsPath + "/playerChatlog.txt"; 
-    public string ericIRYSChatLog = Application.streamingAssetsPath + "/EricIRYSChatlog.txt"; 
+    public string playerChatlog;
+    public string ericIRYSChatLog;
 
     //References to Thread Buttons
     public Button EricContactButton; //Becomes Renes 
@@ -165,6 +165,8 @@ public class TeamsDialogueManager : MonoBehaviour
         GameEvents.TeamsNotifPressed.Subscribe(openToNotif);
         GameEvents.SendChoiceToTeams.Subscribe(recieveOtherScriptChoice);
         ColorUtility.TryParseHtmlString("#A68C7B", out playerPfpColor);
+        playerChatlog = Path.Combine(Application.persistentDataPath, "playerIrysTeamsLogPath"); 
+        ericIRYSChatLog = Path.Combine(Application.persistentDataPath, "ericIrysTeamsLogPath");
     }
 
     public void startConversation(string dialogue_to_parse_file, int convo_id, Thread thisThread){

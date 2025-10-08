@@ -142,7 +142,7 @@ public class GlobalGameEventScript : MonoBehaviour
 
     public void startGame(){
         if (current_save == 0){
-            //emptyChatLogs();
+            emptyChatLogs();
             StartCoroutine(loginSequence());
         }
         else{

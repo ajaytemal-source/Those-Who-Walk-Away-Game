@@ -135,9 +135,8 @@ public class DialougeManager : MonoBehaviour
     List<GameObject> glitchIconHolder = new();
 
 
-    private const float PreResponseWait = 0.8f;
-    private const float PostResponseWait = 0.5f;
-    private const float TinyWait = 0.0001f;
+    private const float ResponseWait = 0.8f;
+    private const float ReformatWait = 0.0001f;
 
     // Start is called before the first frame update
     void Start()
@@ -159,10 +158,12 @@ public class DialougeManager : MonoBehaviour
 
         ParseDialogue(irysDialogueJson, convoId); 
 
-        log_file_path = Path.Combine(Application.streamingAssetsPath, dialogueToWrite + ".txt");
+        //**CHANGING WRITE LOCATION** 
+        //log_file_path = Path.Combine(Application.streamingAssetsPath, dialogueToWrite + ".txt");
+        log_file_path = Path.Combine(Application.persistentDataPath, "playerIrysChatLogPath.txt");
         File.WriteAllText(log_file_path, "");  // Overwrites existing log file intentionally
 
-        currentConversation = StartCoroutine(IrisConversation(convoId)); 
+        currentConversation = StartCoroutine(IrysConversation(convoId)); 
     }
 
     private void ParseDialogue(TextAsset json_file, int convo_id){
@@ -203,7 +204,7 @@ public class DialougeManager : MonoBehaviour
         }
     }
 
-    public IEnumerator IrisConversation(int convoId)
+    public IEnumerator IrysConversation(int convoId)
     {
         var responseDict = conversation_response_dict[convoId];
         var choiceSetDict = conversation_choices_dict[convoId];
@@ -257,9 +258,9 @@ public class DialougeManager : MonoBehaviour
         if (currResponse.triggerGlitch != -1)
             GameEvents.TriggerGlitchReciever.Raise(currResponse.triggerGlitch);
 
-        yield return new WaitForSeconds(PreResponseWait);
+        yield return new WaitForSeconds(ResponseWait);
         yield return StartCoroutine(TextGenAnimation(currResponse.output, Instantiate(output, contentWindow)));
-        yield return new WaitForSeconds(PostResponseWait);
+        yield return new WaitForSeconds(ResponseWait);
 
         AddToLog(log_file_path, $"IRYS:\n{currResponse.output}\n");
 
@@ -317,7 +318,7 @@ public class DialougeManager : MonoBehaviour
             if (currChoices.otherScriptDepends)
                 GameEvents.SendChoiceToTeams.Raise(chosenChoice);
 
-            yield return new WaitForSeconds(TinyWait);
+            yield return new WaitForSeconds(ReformatWait);
             autoScroll.scrollVertically(vertical_ScrollRect);
             AddToLog(log_file_path, $"User:\n{chosen.output}\n");
         }
@@ -394,7 +395,7 @@ public class DialougeManager : MonoBehaviour
         if (selection.pressed){
             pulse.isActive = false; 
             typingBarPressed = true; 
-            //IRYS_CentralObject.transform.SetSiblingIndex(6); // 6 is the level in the scene hierarchy that represents the prioritized app. 
+            //IRYS_CentralObject.transform.SetSiblingIndex(6); // TODO: explain why 6
             choiceManagerScript.changeAllChoices(choices);
             StartCoroutine(choiceManagerScript.turnOnChoices(choices.Count));
             
@@ -447,7 +448,7 @@ public class DialougeManager : MonoBehaviour
                 int endIndex = text.IndexOf('>', i);
                 if (endIndex != -1)
                 {
-                    string waitToken = text.Substring(i + 6, endIndex - (i + 6));
+                    string waitToken = text.Substring(i + 6, endIndex - (i + 6)); // the number part
                     if (float.TryParse(waitToken, out float waitTime))
                     {
                         yield return new WaitForSeconds(waitTime);
@@ -748,6 +749,5 @@ public class DialougeManager : MonoBehaviour
         Utility.openCanvasGroup(keyErrorCodeCanvasGroup); 
         StopAllCoroutines(); 
     }
-
 
 }
