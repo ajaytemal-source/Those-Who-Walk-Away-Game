@@ -2,6 +2,4 @@
 
 This folder contains media for *Those Who Walk Away*.
 
-Note: Some gameplay screenshots may contain spoilers.
-
 Watch the Gameplay Preview --> https://drive.google.com/file/d/1ERzgNv4lYen_s6Mftzvw6GU-gwkN-mtY/view?usp=sharing
