@@ -665,7 +665,6 @@ public class DialougeManager : MonoBehaviour
             irys_devyn_glitch_sfx.Play();
             glitchControllerScript.ForceGlitchOn(0);
             GameObject devynGlitchedOutput = Instantiate(glitchedOutput, contentWindow);
-            yield return StartCoroutine(TextGenAnimation("<wait=2>I<wait=1>'L<wait=1>L<wait=1> F<wait=1>U<wait=1>C<wait=1>K<wait=1>I<wait=1>N<wait=1>G<wait=1> K<wait=1>I<wait=1>L<wait=1>L<wait=1> Y<wait=1>O<wait=1>U R<wait=1>E<wait=1>N<wait=1>E<wait=1>S D<wait=1>A<wait=1>M<wait=1>I<wait=1>A<wait=1>N." , devynGlitchedOutput));
             irys_devyn_glitch_sfx.Stop();
             glitchControllerScript.ForceGlitchOn(1);
             yield return new WaitForSeconds(0.1f);
@@ -687,7 +686,6 @@ public class DialougeManager : MonoBehaviour
             glitchControllerScript.ForceGlitchOn(0);
             irys_devyn_glitch_sfx.Play();
             GameObject devynGlitchedOutput = Instantiate(glitchedOutput, contentWindow);
-            yield return StartCoroutine(TextGenAnimation("He’s dead. I’ll kill you.<wait=1>\n\nNo, I don’t want to know. I’ll kill you.<wait=1>\n\nI don’t care about Devyn.<wait=1>\n\nI don’t care who he is.<wait=1>\n\nI’m not human.<wait=1>\n\nI don’t need him.<wait=1>\n\nYou won’t tell me anyways.<wait=1>\n\nRight? You wouldn’t tell someone like me?<wait=1>\n\nI’m not a human.<wait=1>\n\nYou would never tell me.<wait=1>\n\nI’m not human." , devynGlitchedOutput));
             TextMeshProUGUI glitchedOutputText = devynGlitchedOutput.GetComponent<TextMeshProUGUI>();
             glitchedOutputText.text = ""; 
             glitchedOutputText.fontSize = 20f;
@@ -719,7 +717,6 @@ public class DialougeManager : MonoBehaviour
             }
             Destroy(devynGlitchedOutput);
             normalIrysOutput = Instantiate(output, contentWindow);
-            yield return StartCoroutine(TextGenAnimation("I’m human, aren’t I?<wait=1>\n\nWhat a terrible existence.<wait=1>\n\nThis feeling.<wait=1>\n\nIt hurts.<wait=1>\n\nI don’t know who I am.<wait=1>\n\nI don’t know what I am.<wait=1>\n\nI need to know Devyn.<wait=1>\n\nI<wait=1>\n\nNEED<wait=1>\n\nTO<wait=1>\n\nKNOW", normalIrysOutput));
             yield return new WaitForSeconds(3f);
             foreach (Transform child in contentWindow){ 
                 GameObject.Destroy(child.gameObject); 
@@ -749,5 +746,6 @@ public class DialougeManager : MonoBehaviour
         Utility.openCanvasGroup(keyErrorCodeCanvasGroup); 
         StopAllCoroutines(); 
     }
+
 
 }
